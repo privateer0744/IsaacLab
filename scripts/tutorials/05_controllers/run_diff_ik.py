@@ -160,6 +160,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         else:
             # obtain quantities from simulation
             jacobian = robot.root_physx_view.get_jacobians()[:, ee_jacobi_idx, :, robot_entity_cfg.joint_ids]
+
+            print("*************** jacobian size:", jacobian.shape)
             ee_pose_w = robot.data.body_state_w[:, robot_entity_cfg.body_ids[0], 0:7]
             root_pose_w = robot.data.root_state_w[:, 0:7]
             joint_pos = robot.data.joint_pos[:, robot_entity_cfg.joint_ids]

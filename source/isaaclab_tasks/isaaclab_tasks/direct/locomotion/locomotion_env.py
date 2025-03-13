@@ -103,19 +103,19 @@ class LocomotionEnv(DirectRLEnv):
         )
 
     def _get_observations(self) -> dict:
-        obs = torch.cat(
+        obs = torch.cat(#  sum = 69
             (
-                self.torso_position[:, 2].view(-1, 1),
-                self.vel_loc,
-                self.angvel_loc * self.cfg.angular_velocity_scale,
-                normalize_angle(self.yaw).unsqueeze(-1),
-                normalize_angle(self.roll).unsqueeze(-1),
-                normalize_angle(self.angle_to_target).unsqueeze(-1),
-                self.up_proj.unsqueeze(-1),
-                self.heading_proj.unsqueeze(-1),
-                self.dof_pos_scaled,
-                self.dof_vel * self.cfg.dof_vel_scale,
-                self.actions,
+                self.torso_position[:, 2].view(-1, 1),#  len = 1
+                self.vel_loc,#  len = 3
+                self.angvel_loc * self.cfg.angular_velocity_scale,#  len = 3
+                normalize_angle(self.yaw).unsqueeze(-1),#  len = 1
+                normalize_angle(self.roll).unsqueeze(-1),#  len = 1
+                normalize_angle(self.angle_to_target).unsqueeze(-1),#  len = 1
+                self.up_proj.unsqueeze(-1),#  len = 1
+                self.heading_proj.unsqueeze(-1),#  len = 1
+                self.dof_pos_scaled,#  len = 19
+                self.dof_vel * self.cfg.dof_vel_scale,#  len = 19
+                self.actions,#  len = 19
             ),
             dim=-1,
         )
