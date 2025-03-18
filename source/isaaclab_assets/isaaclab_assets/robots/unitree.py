@@ -22,10 +22,12 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import ActuatorNetMLPCfg, DCMotorCfg, ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
-
+import os
 ##
 # Configuration - Actuators.
 ##
+current_file_path = os.path.abspath(__file__) 
+current_dir = os.path.dirname(current_file_path) 
 
 GO1_ACTUATOR_CFG = ActuatorNetMLPCfg(
     joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
@@ -181,7 +183,8 @@ UNITREE_GO2_CFG = ArticulationCfg(
 
 H1_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/H1/h1.usd",
+        #usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/H1/h1.usd",
+        usd_path = os.path.abspath(os.path.join(current_dir, "../../../usd_assets/H1/h1.usd")),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

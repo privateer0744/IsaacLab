@@ -11,15 +11,18 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
-
+import os
 ##
 # Configuration
 ##
+current_file_path = os.path.abspath(__file__)  # 获取 a.py 的绝对路径
+current_dir = os.path.dirname(current_file_path)  # 获取 a.py 所在目录
 
 HUMANOID_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Humanoid/humanoid_instanceable.usd",
+        #usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Humanoid/humanoid_instanceable.usd",     
+        usd_path = os.path.abspath(os.path.join(current_dir, "../../../usd_assets/Humanoid/humanoid_instanceable.usd")),
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=None,
             max_depenetration_velocity=10.0,
