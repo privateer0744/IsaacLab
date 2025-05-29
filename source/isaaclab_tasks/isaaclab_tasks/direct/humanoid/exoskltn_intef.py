@@ -30,8 +30,8 @@ class Communicating:
         print("**********************local IP: " + localIP + "********************************")
 
         self.cmd_data = [0.0]*len_data_2_skeleton  # 
-        self.master_data = [0.0, 0.25, -0.9, 0.0, 0.0, 0.0, 0.0,
-                                         0.0, -0.25, -0.9, 0.0, 0.0, 0.0, 0.0,
+        self.master_data = [0.0, 0.15, -0.8, 0.0, 0.0, 0.0, 0.0,
+                                         0.0, -0.15, -0.8, 0.0, 0.0, 0.0, 0.0,
                                          0.0, 0.0, 1, 1] # only for simple test # modify if the message from exosklton is expanded
 
         #self.master_data = [0.0]*len_data_f_skeleton

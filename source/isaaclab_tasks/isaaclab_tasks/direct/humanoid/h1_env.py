@@ -3,7 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #  start up: isaaclab.bat -p scripts/reinforcement_learning/rl_games/train.py --task Isaac-H1-Direct-v0
-
+# isaaclab.bat -p scripts/reinforcement_learning/rl_games/play.py --task Isaac-H1-Direct-v0 --num_envs 1
+# ./isaaclab.sh -p scripts/reinforcement_learning/rl_games/train.py --task Isaac-H1-Direct-v0 --headless --num_envs 256
 
 from __future__ import annotations
 import torch
@@ -100,8 +101,11 @@ class H1EnvCfg(DirectRLEnvCfg):
     vertical_scale: float = 0.5
     vertical_vel_scale: float = 0.2
     heading_vel_scale: float = 0.0
-    arm_pitch_scale: float = 0.5
-    knee_reverse_punish = 1.0
+    arm_pitch_scale: float = 2.0
+    arm_roll_scale: float = 2.0
+    arm_yaw_scale: float = 2.0
+    elbow_bend_scale: float = 1.0
+    knee_reverse_punish: float = 2.0
 
 class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton here
     cfg: H1EnvCfg 
@@ -122,6 +126,9 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
         self.ee_names = ['left_ankle_link','right_ankle_link','left_elbow_link','right_elbow_link']
 
         self.shoulder_pitch_ids = [self._joint_dof_idx[self.dof_names.index(name)] for name in ['left_shoulder_pitch','right_shoulder_pitch']]
+        self.shoulder_roll_ids = [self._joint_dof_idx[self.dof_names.index(name)] for name in ['left_shoulder_roll','right_shoulder_roll']]
+        self.shoulder_yaw_ids = [self._joint_dof_idx[self.dof_names.index(name)] for name in ['left_shoulder_yaw','right_shoulder_yaw']]
+        self.elbow_ids = [self._joint_dof_idx[self.dof_names.index(name)] for name in ['left_elbow','right_elbow']]
         self.knee_ids = [self._joint_dof_idx[self.dof_names.index(name)] for name in ['left_knee', 'right_knee']]
         self.ee_body_ids = [self._body_ids[self._body_names.index(name)] for name in self.ee_names]
         self.pelvis_body_ids = self._body_ids[self._body_names.index('pelvis')]
@@ -262,8 +269,14 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
         #print("******************slave_contact_flgr is on:", self.rf_contact.shape)
         #print("************rwd_plus: ", rwd_plus.shape)
 
-        #rwd_plus  = torch.sum((self.MasterMotion.master_root_pos_lf -    self.lf_pos_root)**2, dim = -1) * self.cfg.ends_track_scale
-        #rwd_plus += torch.sum((self.MasterMotion.master_root_pos_rf -    self.rf_pos_root)**2, dim = -1) * self.cfg.ends_track_scale
+        #print("================== master_root_pos_lf[2]:",self.MasterMotion.master_root_pos_lf[0,2])
+        #print("================== lf_pos_root[2]:",self.lf_pos_root[0,2])
+        #print("================== master_root_pos_rf[2]:",self.MasterMotion.master_root_pos_rf.shape)
+        #print("================== rf_pos_root[2]:",self.rf_pos_root.shape)
+
+
+        rwd_plus -= torch.sum((self.MasterMotion.master_root_pos_lf[2] -    self.lf_pos_root[0,2])**2, dim = -1) * self.cfg.ends_track_scale
+        rwd_plus -= torch.sum((self.MasterMotion.master_root_pos_rf[2] -    self.rf_pos_root[0,2])**2, dim = -1) * self.cfg.ends_track_scale
         #rwd_plus += torch.sum((self.MasterMotion.master_root_vel_lf -    self.lf_vel_root)**2, dim = -1) * self.cfg.ends_vel_track_scale
         #rwd_plus += torch.sum((self.MasterMotion.master_root_vel_rf -    self.rf_vel_root)**2, dim = -1) * self.cfg.ends_vel_track_scale
         #rwd_plus += torch.sum((self.MasterMotion.master_root_quat_lf -   self.lf_quat_root)**2, dim = -1) * self.cfg.ends_track_scale
@@ -279,9 +292,17 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
         # arm angle track, #knee must not reverse
         #print("*************self.dof_pos_scaled", self.dof_pos_scaled.shape)
         #print("*************torch.tensor(self.shoulder_pitch_ids, device=self.device)", torch.tensor(self.shoulder_pitch_ids, device=self.device).shape)
-        rwd_plus += torch.sum(self.dof_pos_scaled[:,torch.tensor(self.shoulder_pitch_ids, device=self.device)]**2, dim = -1) * self.cfg.arm_pitch_scale
-        mask = (self.dof_pos_scaled[:, torch.tensor(self.shoulder_pitch_ids, device=self.device)] < 0).all(dim=-1) #where cannot sum up bool matrix directly
-        rwd_plus += torch.where(mask < 0, torch.tensor(1), torch.tensor(0))*self.cfg.knee_reverse_punish
+        #print("=============== arm pitch:", self.dof_pos[:,torch.tensor(self.shoulder_pitch_ids, device=self.device)])
+        #print("=============== arm roll:", self.dof_pos[:,torch.tensor(self.shoulder_roll_ids, device=self.device)])
+        #print("=============== arm yaw:", self.dof_pos[:,torch.tensor(self.shoulder_yaw_ids, device=self.device)])
+        #print("=============== elbow yaw:", self.dof_pos[:,torch.tensor(self.elbow_ids, device=self.device)])
+        #print("=============== knee angle:", self.dof_pos[:, torch.tensor(self.knee_ids, device=self.device)])
+        rwd_plus -= torch.sum(self.dof_pos[:,torch.tensor(self.shoulder_pitch_ids, device=self.device)]**2, dim = -1) * self.cfg.arm_pitch_scale
+        rwd_plus -= torch.sum(self.dof_pos[:,torch.tensor(self.shoulder_roll_ids, device=self.device)]**2, dim = -1) * self.cfg.arm_roll_scale
+        rwd_plus -= torch.sum(self.dof_pos[:,torch.tensor(self.shoulder_yaw_ids, device=self.device)]**2, dim = -1) * self.cfg.arm_yaw_scale
+        rwd_plus -= torch.sum(self.dof_pos[:,torch.tensor(self.elbow_ids, device=self.device)]**2, dim = -1) * self.cfg.elbow_bend_scale
+        mask = (self.dof_pos[:, torch.tensor(self.knee_ids, device=self.device)] > 0).all(dim=-1) #where cannot sum up bool matrix directly
+        rwd_plus += torch.where(mask > 0, torch.tensor(1), torch.tensor(-1))*self.cfg.knee_reverse_punish
     #    
         return rwd_plus
 

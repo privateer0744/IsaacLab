@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from isaaclab_assets import HUMANOID_CFG
+from isaaclab_assets import HUMANOID_CFG, current_file_path, current_dir 
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
@@ -18,6 +18,8 @@ from isaaclab.utils import configclass
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 
 import torch
+
+
 @configclass
 class HumanoidEnvCfg(DirectRLEnvCfg):
     # env
@@ -99,6 +101,8 @@ class HumanoidEnv(LocomotionEnv):
         super().__init__(cfg, render_mode, **kwargs)
 
 # acquire properties
+        print("======================= usd file current_file_path:", current_file_path)
+        print("======================= usd file current_dir:", current_dir)
         torch.set_printoptions(precision=4)
         self._body_ids, self._body_names = self.robot.find_bodies(self.robot.body_names)
         print("***********************body_ids is", self._body_ids)
