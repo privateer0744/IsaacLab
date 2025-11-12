@@ -24,7 +24,7 @@ from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 from isaaclab_tasks.direct.humanoid.H1_remote_procss import Intermediate_Motion, quaternion_to_rotation_matrix, quaternion_conjugate, quaternion_multiply,Judge_contact
 from isaaclab_tasks.direct.humanoid.exoskltn_intef import Communicating
 from threading import Thread
-
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 
 @configclass
 class H1EnvCfg(DirectRLEnvCfg):
@@ -39,6 +39,7 @@ class H1EnvCfg(DirectRLEnvCfg):
     IntervalSim:float = 1 / 120
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=IntervalSim, render_interval=decimation)
+    # for flat terrain
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="plane",
@@ -52,7 +53,25 @@ class H1EnvCfg(DirectRLEnvCfg):
         ),
         debug_vis=False,
     )
-
+    # for rough terrains
+    #terrain = TerrainImporterCfg(
+    #    prim_path="/World/ground",
+    #    terrain_type="generator",
+    #    terrain_generator=ROUGH_TERRAINS_CFG,
+    #    max_init_terrain_level=9,
+    #    collision_group=-1,
+    #    physics_material=sim_utils.RigidBodyMaterialCfg(
+    #        friction_combine_mode="multiply",
+    #        restitution_combine_mode="multiply",
+    #        static_friction=1.0,
+    #        dynamic_friction=1.0,
+    #    ),
+    #    visual_material=sim_utils.MdlFileCfg(
+    #        mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
+    #        project_uvw=True,
+    #    ),
+    #    debug_vis=False,
+    #)
     # scene only one environment
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=64, env_spacing=4.0, replicate_physics=True)
     #scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1)
@@ -149,7 +168,7 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
 
 
     # modify some configurations of locomotionenv
-        self.targets = torch.tensor([0, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
+        self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1) # move only at the current place
         )
         self.targets += self.scene.env_origins
@@ -175,9 +194,15 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
 
 
 
+    #def _reset_idx(self, *args, **kwargs): #rendomize parameter and reset walking targets here
+    #    #self.targets[:, :2] = torch.rand((self.num_envs, 2), device=self.sim.device) * 2000 - 1000 # range -1000~1000 in x and y 
+    #    rand_target = torch.rand(2, device=self.sim.device) * 2000 - 1000
+    #    self.targets[:, :2] = rand_target.unsqueeze(0)
+    #    self.targets += self.scene.env_origins
+    #    print("====================== target reset", self.targets[:, :2])
+    #    super()._reset_idx(*args, **kwargs)
     
-    
-    
+
 
     def _update_ee_vel_pos(self):
 
@@ -209,6 +234,9 @@ class H1Env(LocomotionEnv): # use listened data here, process data_2_skeleton he
         #print("*********rf_omg_root size ", self.rf_omg_root.shape)
         #print("*********rf_quat_root size ", self.rf_quat_root.shape)
 
+
+
+   
 
     #modify reward definition based on father methods
     def _get_rewards(self):

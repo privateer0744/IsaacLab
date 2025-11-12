@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from isaaclab_assets import HUMANOID_CFG, current_file_path, current_dir 
+from isaaclab_assets import HUMANOID_CFG, current_file_path, current_dir
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
@@ -18,8 +18,6 @@ from isaaclab.utils import configclass
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 
 import torch
-
-
 @configclass
 class HumanoidEnvCfg(DirectRLEnvCfg):
     # env
@@ -75,16 +73,16 @@ class HumanoidEnvCfg(DirectRLEnvCfg):
         22.5,  # left_foot
     ]
 
-    heading_weight: float = 0.5
+    heading_weight: float = 1.0
     up_weight: float = 0.1
 
     energy_cost_scale: float = 0.05
     actions_cost_scale: float = 0.01
     alive_reward_scale: float = 2.0
-    dof_vel_scale: float = 0.1
+    dof_vel_scale: float = 0.5
 
-    death_cost: float = -1.0
-    termination_height: float = 0.8
+    death_cost: float = -2.0
+    termination_height: float = 0.6
 
     angular_velocity_scale: float = 0.25
     contact_force_scale: float = 0.01
@@ -124,7 +122,7 @@ class HumanoidEnv(LocomotionEnv):
         rwd_plus = super()._get_rewards()
         
         #rwd_plus += torch.sum(self.dof_pos_scaled[:,torch.tensor(self.shoulder_pitch_ids, device=self.device)]**2, dim = -1) * 0.5
-        #mask = (self.dof_pos_scaled[:, torch.tensor(self.knee_ids, device=self.device)] < 0).all(dim=-1) #where cannot sum up bool matrix directly
-        #rwd_plus += torch.where(mask < 0, torch.tensor(1), torch.tensor(0))*1.0
+        mask = (self.dof_pos[:, torch.tensor(self.knee_ids, device=self.device)] > 0).all(dim=-1) #where cannot sum up bool matrix directly
+        rwd_plus -= torch.where(mask > 0, torch.tensor(1), torch.tensor(-1))*1.0
         
         return rwd_plus
