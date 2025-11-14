@@ -21,7 +21,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import sample_uniform
-
+from isaaclab_assets import FRANKA_PANDA_CFG
 
 @configclass
 class FrankaCabinetEnvCfg(DirectRLEnvCfg):
@@ -50,58 +50,61 @@ class FrankaCabinetEnvCfg(DirectRLEnvCfg):
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=3.0, replicate_physics=True)
 
     # robot
-    robot = ArticulationCfg(
-        prim_path="/World/envs/env_.*/Robot",
-        spawn=sim_utils.UsdFileCfg(
-            usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Franka/franka_instanceable.usd",
-            activate_contact_sensors=False,
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                disable_gravity=False,
-                max_depenetration_velocity=5.0,
-            ),
-            articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-                enabled_self_collisions=False, solver_position_iteration_count=12, solver_velocity_iteration_count=1
-            ),
-        ),
-        init_state=ArticulationCfg.InitialStateCfg(
-            joint_pos={
-                "panda_joint1": 1.157,
-                "panda_joint2": -1.066,
-                "panda_joint3": -0.155,
-                "panda_joint4": -2.239,
-                "panda_joint5": -1.841,
-                "panda_joint6": 1.003,
-                "panda_joint7": 0.469,
-                "panda_finger_joint.*": 0.035,
-            },
-            pos=(1.0, 0.0, 0.0),
-            rot=(0.0, 0.0, 0.0, 1.0),
-        ),
-        actuators={
-            "panda_shoulder": ImplicitActuatorCfg(
-                joint_names_expr=["panda_joint[1-4]"],
-                effort_limit=87.0,
-                velocity_limit=2.175,
-                stiffness=80.0,
-                damping=4.0,
-            ),
-            "panda_forearm": ImplicitActuatorCfg(
-                joint_names_expr=["panda_joint[5-7]"],
-                effort_limit=12.0,
-                velocity_limit=2.61,
-                stiffness=80.0,
-                damping=4.0,
-            ),
-            "panda_hand": ImplicitActuatorCfg(
-                joint_names_expr=["panda_finger_joint.*"],
-                effort_limit=200.0,
-                velocity_limit=0.2,
-                stiffness=2e3,
-                damping=1e2,
-            ),
-        },
-    )
-
+    #robot = ArticulationCfg(
+    #    prim_path="/World/envs/env_.*/Robot",
+    #    spawn=sim_utils.UsdFileCfg(
+    #        usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Franka/franka_instanceable.usd",
+    #        activate_contact_sensors=False,
+    #        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+    #            disable_gravity=False,
+    #            max_depenetration_velocity=5.0,
+    #        ),
+    #        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+    #            enabled_self_collisions=False, solver_position_iteration_count=12, solver_velocity_iteration_count=1
+    #        ),
+    #    ),
+    #    init_state=ArticulationCfg.InitialStateCfg(
+    #        joint_pos={
+    #            "panda_joint1": 1.157,
+    #            "panda_joint2": -1.066,
+    #            "panda_joint3": -0.155,
+    #            "panda_joint4": -2.239,
+    #            "panda_joint5": -1.841,
+    #            "panda_joint6": 1.003,
+    #            "panda_joint7": 0.469,
+    #            "panda_finger_joint.*": 0.035,
+    #        },
+    #        pos=(1.0, 0.0, 0.0),
+    #        rot=(0.0, 0.0, 0.0, 1.0),
+    #    ),
+    #    actuators={
+    #        "panda_shoulder": ImplicitActuatorCfg(
+    #            joint_names_expr=["panda_joint[1-4]"],
+    #            effort_limit=87.0,
+    #            velocity_limit=2.175,
+    #            stiffness=80.0,
+    #            damping=4.0,
+    #        ),
+    #        "panda_forearm": ImplicitActuatorCfg(
+    #            joint_names_expr=["panda_joint[5-7]"],
+    #            effort_limit=12.0,
+    #            velocity_limit=2.61,
+    #            stiffness=80.0,
+    #            damping=4.0,
+    #        ),
+    #        "panda_hand": ImplicitActuatorCfg(
+    #            joint_names_expr=["panda_finger_joint.*"],
+    #            effort_limit=200.0,
+    #            velocity_limit=0.2,
+    #            stiffness=2e3,
+    #            damping=1e2,
+    #        ),
+    #    },
+    #)
+    robot:ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    robot.init_state.pos=(2.0, 0.0, 0.0)
+    robot.init_state.rot=(0.0, 0.0, 0.0, 1.0)
+   
     # cabinet
     cabinet = ArticulationCfg(
         prim_path="/World/envs/env_.*/Cabinet",

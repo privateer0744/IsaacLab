@@ -1,0 +1,126 @@
+from dataclasses import MISSING
+
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg, DeformableObjectCfg, RigidObjectCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import CurriculumTermCfg 
+from isaaclab.managers import EventTermCfg 
+from isaaclab.managers import ObservationGroupCfg 
+from isaaclab.managers import ObservationTermCfg 
+from isaaclab.managers import RewardTermCfg 
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransformerCfg
+from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import DIGITALTWIN_NUCLEUS_DIR
+from isaaclab_assets import FRANKA_PANDA_CFG
+import isaaclab_tasks.manager_based.hzy_manipulate.mdp as mdp
+
+
+
+class MySceneCfg(InteractiveSceneCfg):
+    """Configuration for a cart-pole scene."""
+
+    # ground plane
+    ground = AssetBaseCfg(
+        prim_path="/World/ground",
+        spawn=sim_utils.GroundPlaneCfg(size=(100.0, 100.0)),
+    )
+
+     #dual franka
+    robot_1: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot1")
+    robot_1.init_state.pos=(-0.3,0.5,0.8)
+    
+    
+    robot_2: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot2")
+    robot_2.init_state.pos=(0.3,-0.5,0.8)
+    robot_2.init_state.rot=(0,0,0,1)
+
+    # #lights
+    dome_light = AssetBaseCfg(
+        prim_path="/World/DomeLight",
+        spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=500.0),
+    )
+ 
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/table",
+        spawn=sim_utils.UsdFileCfg(
+            usd_path=f"{DIGITALTWIN_NUCLEUS_DIR}/Assets/Warehouse/Furnishing/Workbenches/LabWorkbench_A/LabWorkbench_A02_01.usd",                           
+            # rigid_props or other props as needed
+            scale=(0.01,0.02,0.01),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=False,
+            max_depenetration_velocity=5.0,
+            ),
+        ),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(0.0, 0.0, 0.0),
+            rot=(0.7071, 0, 0, 0.7071),
+        ),
+    )
+
+
+@configclass
+class ObservationsCfg:
+    class Dummy(ObservationGroupCfg):
+        dummy_obs = ObservationTermCfg(func=mdp.dummy_obs)
+    policy: Dummy = Dummy()
+
+
+#@configclass
+#class ObservationsCfg:
+#    class PolicyCfg(ObservationGroupCfg):
+#        # observation terms (order preserved)
+#        joint_pos_rel = ObservationTermCfg(func=mdp.joint_pos_rel)
+#        joint_vel_rel = ObservationTermCfg(func=mdp.joint_vel_rel)
+#    policy: PolicyCfg = PolicyCfg()
+
+@configclass
+class ActionsCfg:
+    pass
+
+@configclass
+class RewardsCfg:
+    dummy = RewardTermCfg(func=mdp.dummy_reward, weight=0.0)
+
+@configclass
+class TerminationsCfg:
+    # (1) Time out
+    time_out = TerminationTermCfg(func=mdp.time_out, time_out=True)
+
+@configclass
+class EventCfg:
+    pass
+
+
+
+
+@configclass
+class DualFrankaEnvCfg(ManagerBasedRLEnvCfg):
+    """Configuration for the MuJoCo-style Humanoid walking environment."""
+
+    # Scene settings
+    scene: MySceneCfg = MySceneCfg(num_envs=4096, env_spacing=5.0)
+    # Basic settings
+    observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
+    # MDP settings
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
+    events: EventCfg = EventCfg()
+
+    def __post_init__(self):
+        """Post initialization."""
+        # general settings
+        self.decimation = 2
+        self.episode_length_s = 16.0
+        # simulation settings
+        self.sim.dt = 1 / 120.0
+        self.sim.render_interval = self.decimation
+        self.sim.physx.bounce_threshold_velocity = 0.2
+        # default friction material
+        self.sim.physics_material.static_friction = 1.0
+        self.sim.physics_material.dynamic_friction = 1.0
+        self.sim.physics_material.restitution = 0.0
