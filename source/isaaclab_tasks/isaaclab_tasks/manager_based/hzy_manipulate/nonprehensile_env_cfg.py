@@ -162,7 +162,7 @@ class NonprehensileEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the MuJoCo-style Humanoid walking environment."""
 
     # Scene settings
-    scene: NonprehensileSceneCfg = NonprehensileSceneCfg(num_envs=1, env_spacing=5.0)
+    scene: NonprehensileSceneCfg = NonprehensileSceneCfg(num_envs=16, env_spacing=5.0)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -200,26 +200,33 @@ class NonprehensileEnv(ManagerBasedRLEnv):
     def _reset_idx(self, env_ids: torch.Tensor, *args, **kwargs):
         # 必须在重置环境时，将对应环境的阶段归零
         super()._reset_idx(env_ids, *args, **kwargs)
-        self.task_phase[env_ids] = 0
+        self.task_phase[env_ids] = 1
 
 
     def step(self, actions):
         obs, reward, terminated, time_out, extras = super().step(actions)
         
         #mdp.get_pos(obstacle_handle)
-        self.target_obj_state_w = mdp.get_pos(self.target_obj_handle)
+        target_obj_state_w = self.target_obj_handle.data.body_state_w
+
+        num_bottles_per_env = self.obstacle_handle.data.body_state_w.shape[0] // self.num_envs
+        bottles_state_w = self.obstacle_handle.data.body_state_w.view(self.num_envs, num_bottles_per_env, 13)
 
         ee_state_w = self.robot.data.body_state_w[:,self._ee_link_idx,:].squeeze(1)
        
         self.ee_pos_w, self.ee_quat_w, self.ee_vel_w, self.ee_omg_w = ee_state_w[:,:3], ee_state_w[:,3:7], ee_state_w[:,7:10], ee_state_w[:,10:13]
 
-        print("末端执行器状态: ",ee_state_w)
-        print("末端执行器位置: ",self.ee_pos_w)
-        print("末端执行器姿态: ",self.ee_quat_w)
-        print("末端执行器速度: ",self.ee_vel_w)
-        print("末端执行器角速度: ",self.ee_omg_w)
+        #self.bottle_pos_w, self.bottle_quat_w, self.bottle_vel_w, self.bottle_omeg_w  = bottles_state_w[:,:,:3], bottles_state_w[:,:,3:7], bottles_state_w[:,:,7:10], bottles_state_w[:,:,10:13]
+        #print("末端执行器状态: ",ee_state_w)
+        #print("末端执行器位置: ",self.ee_pos_w)
+        #print("末端执行器姿态: ",self.ee_quat_w)
+        #print("末端执行器速度: ",self.ee_vel_w)
+        #print("末端执行器角速度: ",self.ee_omg_w)
         #print("目标对象位置: ",self.target_obj_state_w)
-
+        self.task_phase = mdp.update_phase(self)
+        #print("当前状态: ",self.task_phase)
+        print("size of target_obj_state_w: ",target_obj_state_w.shape)
+        print("size of bottles_state_w: ",bottles_state_w.shape)
 
         #print(f"检测到瓶子数量: {self.scene['bottles'].num_instances}")
 #        ## 获取摄像头 sensor 对象

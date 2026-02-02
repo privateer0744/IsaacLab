@@ -25,3 +25,7 @@ def get_pos(objects: RigidObject) -> tuple[torch.Tensor,torch.Tensor]:
     quat = objects.data.root_quat_w
     #print("bottles' pos are:",pos,quat)
     return pos, quat
+
+
+def update_phase(env: ManagerBasedRLEnv):
+    return torch.zeros(env.num_envs, dtype=torch.long, device=env.device)
