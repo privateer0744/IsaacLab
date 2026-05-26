@@ -34,7 +34,7 @@ class NonprehensileSceneCfg(InteractiveSceneCfg):
     MyScene = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/MyScene",
         spawn=sim_utils.UsdFileCfg(
-            usd_path="D:/projects/Non-Prehensile/Basket2.usd",                           
+            usd_path="D:/projects/Non-Prehensile/Basket.usd",                           
             # rigid_props or other props as needed
             scale=(1.0,1.0,1.0),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -186,6 +186,7 @@ class NonprehensileEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material.dynamic_friction = 1.0
         self.sim.physics_material.restitution = 0.0
 
+
 class NonprehensileEnv(ManagerBasedRLEnv):
 
     def __init__(self, cfg: NonprehensileEnvCfg , render_mode: str | None = None, **kwargs):
@@ -197,13 +198,17 @@ class NonprehensileEnv(ManagerBasedRLEnv):
         self.ee_link_name = "panda_hand"
         #self._ee_link_idx, _ = self.robot.find_bodies(self.ee_link_name)
         self.num_bottles_per_env = self.obstacle_handle.data.body_state_w.shape[0] // self.num_envs
+        self.num_target_per_env = 1 # only have one target in an env
         self.father_rot=torch.tensor([math.cos(math.pi / 2/2), math.sin(math.pi / 2/2), 0, 0], dtype=torch.float32, device=self.device).view(1,1,4).repeat(self.num_envs, self.num_bottles_per_env, 1)
         self.min_inscribed_radius = torch.zeros((self.num_envs,self.num_bottles_per_env), dtype=torch.float32, device=self.device)
         bottles_state_w = self.obstacle_handle.data.body_state_w.view(self.num_envs, self.num_bottles_per_env, 13)
-
-        #get obstacle pos
+        target_state_w = self.target_obj_handle.data.body_state_w.view(self.num_envs, self.num_target_per_env, 13)
+        #get obstacle preset states
         self.pre_bottles_vel_w = bottles_state_w[:,:,7:10]
         self.pre_bottles_omeg_w = bottles_state_w[:,:,10:13]
+        #get target preset states
+        self.pre_target_vel_w = target_state_w[:,:,7:10]
+        self.pre_target_omeg_w = target_state_w[:,:,10:13]
 
 
 
@@ -239,7 +244,8 @@ class NonprehensileEnv(ManagerBasedRLEnv):
         #get target object pos
         self.target_pos_w = target_obj_state_w[:,:,:3]
         self.target_quat_w = target_obj_state_w[:,:,3:7]
-
+        self.target_vel_w = target_obj_state_w[:,:,7:10]
+        self.target_omeg_w = target_obj_state_w[:,:,10:13]
         #get obstacle pos vel
         #self.bottles_pos_w = bottles_state_w[:,:,:3]
         #self.bottles_vel_w = bottles_state_w[:,:,3:6]
@@ -268,13 +274,15 @@ class NonprehensileEnv(ManagerBasedRLEnv):
 
         self.min_inscribed_radius = mdp.get_min_inscribed_radius(self) #获取目标对象的抓取通道开放半径
 
-        #self.max_momentum,self.max_moment = mdp.get_obj_max_momentum(self) #用于惩罚将任意物体打飞
+        self.max_inertia,self.max_moment = mdp.get_obj_max_momentum(self) #用于惩罚将任意物体打飞
 #
         #self.contactforce, self.contactforce_gradient  = mdp.get_contactforce(self)# 用于惩罚过大的接触力
 #
         #self.max_stuck_duration = mdp.get_stuck_duration(self) #用于惩罚堵塞时间过长
 #
         #self.wander_duration = mdp.get_wander_duration(self)#用于惩罚末端装置无效闲逛挂机
+
+        
 
         #print("当前状态: ",self.task_phase)
         #print("size of self.bottles_pos_w: ",self.bottles_pos_w.shape)

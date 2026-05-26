@@ -73,20 +73,20 @@ def get_min_inscribed_radius(env: ManagerBasedRLEnv):
     # --- 2. 瓶子轴向与基向量计算 ---
     z_unit = torch.tensor([0.0, 0.0, 1.0], device=env.device).repeat(num_envs, num_bottles, 1)
     v_a = quat_apply(q_b, z_unit)
-    print("v_a : ",v_a) 
+    #print("v_a : ",v_a) 
 
     ref_vec = torch.tensor([1.0, 0.0, 0.0], device=env.device).repeat(num_envs, num_bottles, 1)
     is_x_parallel = torch.abs(v_a[:, :, 0]) > 0.99
     ref_vec[is_x_parallel] = torch.tensor([0.0, 1.0, 0.0], device=env.device)
-    print("ref_vec : ",ref_vec) 
+    #print("ref_vec : ",ref_vec) 
 
     u = torch.cross(ref_vec, v_a, dim=-1)
-    print("u : ",u)
+    #print("u : ",u)
     u = u / torch.norm(u, dim=-1, keepdim=True)
     v = torch.cross(v_a, u, dim=-1)
     #v = v / torch.norm(v, dim=-1, keepdim=True)
-    print("u : ",u)
-    print("v : ",v)
+    #print("u : ",u)
+    #print("v : ",v)
 
     # --- 3. 轴线段最短距离 (情况一) ---
     dx_base = p_b[:, :, 0] - target_xy[:, :, 0]
@@ -115,13 +115,13 @@ def get_min_inscribed_radius(env: ManagerBasedRLEnv):
     t_end = torch.where(is_at_top, torch.tensor(bottle_h, device=env.device), torch.tensor(0.0, device=env.device))
     p_cap_center = p_b + t_end.unsqueeze(-1) * v_a 
     #print("t_end shape: ",t_end.shape)
-    print("p_cap_center : ",p_cap_center)
+    #print("p_cap_center : ",p_cap_center)
 
     # 这里的维度匹配逻辑：[N, M, 1] + [1, 1, 16] * [N, M, 1] -> [N, M, 16]
     samples_x = p_cap_center[:, :, 0:1] + bottle_r * (cos_theta * u[:, :, 0:1] + sin_theta * v[:, :, 0:1])
     samples_y = p_cap_center[:, :, 1:2] + bottle_r * (cos_theta * u[:, :, 1:2] + sin_theta * v[:, :, 1:2])
-    print("samples_x :", samples_x)
-    print("samples_y :", samples_y)
+    #print("samples_x :", samples_x)
+    #print("samples_y :", samples_y)
 
     # stack 之后维度变成 [N, M, 16, 2]
     samples_xy = torch.stack([samples_x, samples_y], dim=-1)
@@ -141,7 +141,7 @@ def get_min_inscribed_radius(env: ManagerBasedRLEnv):
     #print(f"bottle pos: {p_b[0,0]}, target pos: {target_xy[0,0]}")
     #print(f"v_a: {v_a[0,0]}, denom: {denom[0,0]}, t1: {t1[0,0]}")
     #print(f"is_at_caps: {is_at_caps[0,0]}, dist_side: {dist_side[0,0]}, min_dist_cap: {min_dist_cap[0,0]}")
-    print(f"final_dist: ",final_dist)
+    #print(f"final_dist: ",final_dist)
     
     return torch.clamp(final_dist, min=0.0)
 
@@ -151,18 +151,30 @@ def get_obj_max_momentum(env: ManagerBasedRLEnv):
     pre_v_b = env.pre_bottles_vel_w
     omeg_b = env.bottles_omeg_w
     pre_omeg_b = env.pre_bottles_omeg_w
+    v_target = env.target_vel_w
+    pre_v_target = env.pre_target_vel_w
+    omeg_target = env.target_omeg_w
+    pre_omeg_target = env.pre_target_omeg_w
     grad_v = v_b - pre_v_b
-        
+    grad_omeg_b = omeg_b - pre_omeg_b
 
-    return torch.tensor(0.0),torch.tensor(0.0)
+    print("pre_v :", pre_v_b.max())
+    print("v :", v_b.max())
+      
+
+    return grad_v.max(),grad_omeg_b.max()
 
 def get_contactforce(env: ManagerBasedRLEnv):
+
+
     return torch.tensor(0.0),torch.tensor(0.0)
 
 
 def get_stuck_duration(env: ManagerBasedRLEnv):
+
     return torch.tensor(0.0)
 
 
 def get_wander_duration(env: ManagerBasedRLEnv):
+    
     return torch.tensor(0.0)
